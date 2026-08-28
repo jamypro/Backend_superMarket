@@ -146,6 +146,60 @@ curl -X POST http://localhost:3000/api/productos \
   -d '{"codigo_barras": "7701234567890", "nombre": "Arroz", "id_categoria": 1, "precio_venta": 4500}'
 ```
 
+## Inventario
+
+Módulo básico de inventario. Consulta el stock y registra entradas de inventario. El stock se actualiza automáticamente mediante el trigger `trg_entrada_actualiza_stock` al registrar una entrada; el backend no actualiza el stock manualmente.
+
+### Endpoints
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| GET | `/api/inventario` | Lista el stock actual de todos los productos |
+| GET | `/api/inventario/:productoId` | Stock de un producto específico |
+| POST | `/api/inventario/entrada` | Registra una entrada de inventario (requiere autenticación) |
+| GET | `/api/inventario/movimientos` | Lista los movimientos de inventario (entradas) |
+
+Campos devueltos en las consultas de stock: `id_inventario`, `producto_id`, `codigo_barras`, `producto`, `producto_activo`, `stock_actual`, `stock_minimo`, `stock_maximo`, `stock_reservado`, `expira_en`, `actualizado_en`, `stock_critico` (`true`/`false` cuando `stock_actual <= stock_minimo`) y `nivel_alerta` (`AGOTADO`, `CRÍTICO` o `NORMAL`).
+
+### Registrar entrada
+
+```json
+{
+  "producto_id": 1,
+  "cantidad": 20,
+  "tipo_referencia": "Compra",
+  "numero_factura_proveedor": "FAC-001",
+  "orden_compra_id": null,
+  "notas": "Recepción de mercancía"
+}
+```
+
+Campos obligatorios: `producto_id` y `cantidad` (entero mayor que 0). Campos opcionales: `tipo_referencia`, `numero_factura_proveedor`, `orden_compra_id` y `notas`. El campo `creado_por` se obtiene del usuario autenticado (JWT).
+
+```bash
+# Registrar una entrada (requiere token)
+curl -X POST http://localhost:3000/api/inventario/entrada \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"producto_id": 1, "cantidad": 20, "tipo_referencia": "Compra"}'
+```
+
+### Consultar movimientos
+
+`GET /api/inventario/movimientos` admite los siguientes filtros (query params):
+
+- `producto_id`: filtra por producto.
+- `orden_compra_id`: filtra por orden de compra.
+- `tipo_referencia`: coincidencia exacta.
+- `fecha_inicio`: movimientos desde una fecha (`YYYY-MM-DD`).
+- `fecha_fin`: movimientos hasta una fecha (`YYYY-MM-DD`).
+
+```bash
+curl "http://localhost:3000/api/inventario/movimientos?producto_id=1"
+```
+
+> Nota: actualmente los movimientos solo incluyen entradas (`entrada_inventario`). Las salidas de inventario se implementarán en una fase posterior.
+
 ## Proceso de instalación desde cero
 
 ```bash

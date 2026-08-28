@@ -8,6 +8,7 @@ const healthRoutes = require('./routes/health.routes');
 const authRoutes = require('./routes/auth.routes');
 const categoriaRoutes = require('./routes/categoria.routes');
 const productoRoutes = require('./routes/producto.routes');
+const inventarioRoutes = require('./routes/inventario.routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
@@ -21,6 +22,7 @@ app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
+app.use('/api/inventario', inventarioRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
