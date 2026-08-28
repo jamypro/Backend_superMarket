@@ -8,7 +8,8 @@ function notFoundHandler(req, res) {
 
 function errorHandler(err, req, res, next) {
   const statusCode = err.status || err.statusCode || 500;
-  const message = err.message || 'Error interno del servidor';
+  const isServerError = statusCode >= 500;
+  const message = isServerError ? 'Error interno del servidor' : err.message || 'Error interno del servidor';
 
   if (process.env.NODE_ENV !== 'production') {
     console.error(err);
@@ -17,7 +18,7 @@ function errorHandler(err, req, res, next) {
   res.status(statusCode).json({
     success: false,
     message,
-    error: statusCode >= 500 ? 'Error interno del servidor' : message,
+    error: isServerError ? 'Error interno del servidor' : message,
   });
 }
 
