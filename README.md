@@ -87,6 +87,65 @@ npm start
 GET /api/health
 ```
 
+## Catálogo
+
+Módulo básico de catálogo (categorías y productos). Todas las respuestas usan el formato:
+
+```json
+{ "success": true, "message": "...", "data": { } }
+```
+
+### Categorías
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| GET | `/api/categorias` | Lista todas las categorías |
+| GET | `/api/categorias/:id` | Obtiene una categoría por ID |
+| POST | `/api/categorias` | Crea una categoría |
+| PUT | `/api/categorias/:id` | Actualiza una categoría |
+| DELETE | `/api/categorias/:id` | Elimina una categoría |
+
+Campos de categoría: `nombre` (obligatorio), `descripcion` (opcional), `activo` (opcional, `0` o `1`).
+
+```bash
+# Crear categoría
+curl -X POST http://localhost:3000/api/categorias \
+  -H "Content-Type: application/json" \
+  -d '{"nombre": "Lácteos", "descripcion": "Productos lácteos"}'
+```
+
+### Productos
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| GET | `/api/productos` | Lista productos (admite filtros) |
+| GET | `/api/productos/:id` | Obtiene un producto por ID |
+| POST | `/api/productos` | Crea un producto |
+| PUT | `/api/productos/:id` | Actualiza un producto |
+| DELETE | `/api/productos/:id` | Elimina un producto |
+
+Campos de producto: `codigo_barras` (opcional, único), `nombre` (obligatorio), `descripcion`, `id_categoria`, `id_unidad_de_medida`, `precio_venta`, `precio_compra`, `precio_minimo`, `porcentaje_iva`, `caducidad` (`YYYY-MM-DD`), `activo` (`0` o `1`).
+
+Filtros disponibles en `GET /api/productos` (query params):
+
+- `nombre`: búsqueda parcial por nombre.
+- `codigo_barras`: coincidencia exacta por código de barras.
+- `id_categoria`: filtra por categoría.
+- `activo`: filtra por estado (`0` o `1`).
+
+```bash
+# Listar productos que coincidan con "arroz"
+curl "http://localhost:3000/api/productos?nombre=arroz"
+
+# Buscar por código de barras
+curl "http://localhost:3000/api/productos?codigo_barras=123456"
+
+# Crear producto
+curl -X POST http://localhost:3000/api/productos \
+  -H "Content-Type: application/json" \
+  -d '{"codigo_barras": "7701234567890", "nombre": "Arroz", "id_categoria": 1, "precio_venta": 4500}'
+```
+
 ## Proceso de instalación desde cero
 
 ```bash
