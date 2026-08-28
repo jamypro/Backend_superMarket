@@ -24,6 +24,9 @@ coverage
 *.lcov
 .AGENTS.md
 
+# macOS
+.DS_Store
+
 # nyc test coverage
 .nyc_output
 
@@ -63,6 +66,7 @@ web_modules/
 
 # Output of 'npm pack'
 *.tgz
+.AGENTS.md
 
 # Yarn Integrity file
 .yarn-integrity

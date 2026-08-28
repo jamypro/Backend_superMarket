@@ -1,0 +1,23 @@
+{
+  "name": "backend-supermarket",
+  "version": "0.1.0",
+  "description": "Sistema Web de Facturación e Inventario para Supermercados — Backend (Node.js + Express + MySQL)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "db:setup": "node scripts/setup-db.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "mysql2": "^3.24.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
