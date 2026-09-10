@@ -200,6 +200,65 @@ curl "http://localhost:3000/api/inventario/movimientos?producto_id=1"
 
 > Nota: actualmente los movimientos solo incluyen entradas (`entrada_inventario`). Las salidas de inventario se implementarán en una fase posterior.
 
+## Usuarios
+
+Módulo de administración de usuarios. Todos los endpoints requieren autenticación (`Authorization: Bearer <TOKEN>`). Las contraseñas se almacenan con hash `bcrypt` y nunca se devuelven en las respuestas.
+
+### Endpoints
+
+| Método | Endpoint | Descripción |
+| --- | --- | --- |
+| GET | `/api/usuarios` | Lista usuarios (admite filtros) |
+| GET | `/api/usuarios/:id` | Obtiene un usuario por ID |
+| POST | `/api/usuarios` | Crea un usuario |
+| PUT | `/api/usuarios/:id` | Actualiza un usuario |
+| PATCH | `/api/usuarios/:id/contrasena` | Cambia la contraseña de un usuario |
+| DELETE | `/api/usuarios/:id` | Elimina un usuario |
+
+Campos de usuario: `rol_id` (obligatorio), `nombre` (obligatorio), `apellido`, `tipo_documento` (`CC`, `NIT`, `CE` o `Pasaporte`), `documento` (único), `correo` (obligatorio, único), `contrasena` (obligatorio, mínimo 8 caracteres), `telefono`, `estado` (`0` o `1`).
+
+Filtros disponibles en `GET /api/usuarios` (query params):
+
+- `nombre`: búsqueda parcial por nombre o apellido.
+- `correo`: búsqueda parcial por correo.
+- `documento`: coincidencia exacta por documento.
+- `rol_id`: filtra por rol.
+- `estado`: filtra por estado (`0` o `1`).
+
+```bash
+# Listar usuarios
+curl "http://localhost:3000/api/usuarios" \
+  -H "Authorization: Bearer <TOKEN>"
+
+# Listar usuarios por rol
+curl "http://localhost:3000/api/usuarios?rol_id=1" \
+  -H "Authorization: Bearer <TOKEN>"
+
+# Crear usuario
+curl -X POST http://localhost:3000/api/usuarios \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"rol_id": 3, "nombre": "Laura", "apellido": "Pérez", "correo": "laura@example.com", "contrasena": "clave12345"}'
+
+# Actualizar usuario
+curl -X PUT http://localhost:3000/api/usuarios/3 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"telefono": "3001234567", "estado": 1}'
+
+# Cambiar contraseña
+curl -X PATCH http://localhost:3000/api/usuarios/3/contrasena \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"contrasena": "nuevaClave123"}'
+
+# Eliminar usuario
+curl -X DELETE http://localhost:3000/api/usuarios/3 \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+> Nota: no se puede eliminar la propia cuenta ni desactivar/eliminar al último administrador activo.
+
 ## Proceso de instalación desde cero
 
 ```bash
