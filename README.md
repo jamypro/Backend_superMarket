@@ -11,6 +11,7 @@ Backend del sistema de facturación e inventario para supermercados. Expone una 
 - Node.js
 - Express
 - MySQL
+- TypeORM
 
 ## Requisitos
 
@@ -275,9 +276,10 @@ npm run dev
 
 El backend sigue una arquitectura por capas dentro de `src/`:
 
-- `config/` — Configuración de la aplicación (conexión a MySQL, variables de entorno).
+- `config/` — Configuración de la aplicación (DataSource de TypeORM, variables de entorno).
 - `controllers/` — Capa HTTP: reciben `req/res`, validan entrada y arman la respuesta.
-- `models/` — Definición de las estructuras de datos del dominio.
+- `entities/` — Definición de las entidades de TypeORM (`EntitySchema`) que mapean las tablas de MySQL.
+- `repositories/` — Capa de acceso a datos sobre TypeORM (repositorios y consultas).
 - `routes/` — Definición de endpoints (sin lógica de negocio).
 - `services/` — Lógica de negocio.
 - `middlewares/` — Funciones transversales (manejo de errores, autenticación, etc.).

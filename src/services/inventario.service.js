@@ -1,77 +1,25 @@
-const { pool } = require('../config/database');
+const inventarioRepository = require('../repositories/inventario.repository');
 const httpError = require('../utils/httpError');
-
-const SELECT_STOCK = `
-  SELECT inv.id_inventario,
-         inv.producto_id,
-         p.codigo_barras,
-         p.nombre AS producto,
-         p.activo AS producto_activo,
-         inv.stock_actual,
-         inv.stock_minimo,
-         inv.stock_maximo,
-         inv.stock_reservado,
-         inv.expira_en,
-         inv.actualizado_en,
-         (inv.stock_actual <= inv.stock_minimo) AS stock_critico,
-         CASE
-           WHEN inv.stock_actual = 0 THEN 'AGOTADO'
-           WHEN inv.stock_actual <= inv.stock_minimo THEN 'CRÍTICO'
-           ELSE 'NORMAL'
-         END AS nivel_alerta
-    FROM inventario inv
-    JOIN productos p ON p.id_producto = inv.producto_id
-`;
-
-const SELECT_ENTRADA = `
-  SELECT e.id_entrada_inventario,
-         e.producto_id,
-         p.codigo_barras,
-         p.nombre AS producto,
-         e.cantidad,
-         e.tipo_referencia,
-         e.numero_factura_proveedor,
-         e.orden_compra_id,
-         e.notas,
-         e.creado_por,
-         e.created_at,
-         'ENTRADA' AS tipo
-    FROM entrada_inventario e
-    JOIN productos p ON p.id_producto = e.producto_id
-`;
 
 function mapStockRow(row) {
   return { ...row, stock_critico: Boolean(row.stock_critico) };
 }
 
 async function listStock() {
-  const [rows] = await pool.execute(`${SELECT_STOCK} ORDER BY p.nombre ASC`);
+  const rows = await inventarioRepository.listStock();
   return rows.map(mapStockRow);
 }
 
 async function findStockByProducto(productoId) {
-  const [productos] = await pool.execute(
-    `SELECT id_producto, codigo_barras, nombre, activo
-       FROM productos
-      WHERE id_producto = ?`,
-    [productoId]
-  );
+  const producto = await inventarioRepository.findProductoResumen(productoId);
 
-  if (productos.length === 0) {
+  if (!producto) {
     return null;
   }
 
-  const [inventario] = await pool.execute(
-    `SELECT id_inventario, stock_actual, stock_minimo, stock_maximo,
-            stock_reservado, expira_en, actualizado_en
-       FROM inventario
-      WHERE producto_id = ?`,
-    [productoId]
-  );
+  const inv = await inventarioRepository.findInventarioByProducto(productoId);
 
-  const producto = productos[0];
-
-  if (inventario.length === 0) {
+  if (!inv) {
     return {
       producto_id: producto.id_producto,
       codigo_barras: producto.codigo_barras,
@@ -89,8 +37,6 @@ async function findStockByProducto(productoId) {
       tiene_registro_inventario: false,
     };
   }
-
-  const inv = inventario[0];
 
   return {
     producto_id: producto.id_producto,
@@ -116,103 +62,47 @@ async function findStockByProducto(productoId) {
 }
 
 async function findEntradaById(id) {
-  const [rows] = await pool.execute(
-    `${SELECT_ENTRADA} WHERE e.id_entrada_inventario = ?`,
-    [id]
-  );
-  return rows[0] || null;
+  return inventarioRepository.findEntradaById(id);
 }
 
 async function registerEntrada(data, creadoPor) {
-  const connection = await pool.getConnection();
-
   try {
-    await connection.beginTransaction();
-
-    const [productos] = await connection.execute(
-      'SELECT id_producto FROM productos WHERE id_producto = ?',
-      [data.producto_id]
-    );
-    if (productos.length === 0) {
-      throw httpError(404, 'Producto no encontrado');
-    }
-
-    if (data.orden_compra_id !== undefined && data.orden_compra_id !== null) {
-      const [ordenes] = await connection.execute(
-        'SELECT id_orden_compra FROM ordenes_compra WHERE id_orden_compra = ?',
-        [data.orden_compra_id]
-      );
-      if (ordenes.length === 0) {
-        throw httpError(400, 'La orden de compra especificada no existe');
+    const idEntrada = await inventarioRepository.transaction(async (entityManager) => {
+      const productoExiste = await inventarioRepository.existsProducto(entityManager, data.producto_id);
+      if (!productoExiste) {
+        throw httpError(404, 'Producto no encontrado');
       }
-    }
 
-    const [result] = await connection.execute(
-      `INSERT INTO entrada_inventario
-         (producto_id, orden_compra_id, numero_factura_proveedor,
-          tipo_referencia, cantidad, notas, creado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.producto_id,
-        data.orden_compra_id ?? null,
-        data.numero_factura_proveedor ?? null,
-        data.tipo_referencia ?? null,
-        data.cantidad,
-        data.notas ?? null,
-        creadoPor,
-      ]
-    );
+      if (data.orden_compra_id !== undefined && data.orden_compra_id !== null) {
+        const ordenExiste = await inventarioRepository.existsOrdenCompra(entityManager, data.orden_compra_id);
+        if (!ordenExiste) {
+          throw httpError(400, 'La orden de compra especificada no existe');
+        }
+      }
 
-    await connection.commit();
+      return inventarioRepository.insertEntrada(entityManager, {
+        producto_id: data.producto_id,
+        orden_compra_id: data.orden_compra_id ?? null,
+        numero_factura_proveedor: data.numero_factura_proveedor ?? null,
+        tipo_referencia: data.tipo_referencia ?? null,
+        cantidad: data.cantidad,
+        notas: data.notas ?? null,
+        creado_por: creadoPor,
+      });
+    });
 
-    return findEntradaById(result.insertId);
+    return findEntradaById(idEntrada);
   } catch (err) {
-    await connection.rollback();
-    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+    const code = err && err.driverError && err.driverError.code;
+    if (code === 'ER_NO_REFERENCED_ROW_2') {
       throw httpError(400, 'El usuario o la referencia especificada no existe');
     }
     throw err;
-  } finally {
-    connection.release();
   }
 }
 
 async function listMovimientos(filters = {}) {
-  const conditions = [];
-  const values = [];
-
-  if (filters.producto_id !== undefined && filters.producto_id !== null) {
-    conditions.push('e.producto_id = ?');
-    values.push(filters.producto_id);
-  }
-
-  if (filters.orden_compra_id !== undefined && filters.orden_compra_id !== null) {
-    conditions.push('e.orden_compra_id = ?');
-    values.push(filters.orden_compra_id);
-  }
-
-  if (filters.tipo_referencia) {
-    conditions.push('e.tipo_referencia = ?');
-    values.push(filters.tipo_referencia);
-  }
-
-  if (filters.fecha_inicio) {
-    conditions.push('e.created_at >= ?');
-    values.push(`${filters.fecha_inicio} 00:00:00`);
-  }
-
-  if (filters.fecha_fin) {
-    conditions.push('e.created_at <= ?');
-    values.push(`${filters.fecha_fin} 23:59:59`);
-  }
-
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-  const [rows] = await pool.execute(
-    `${SELECT_ENTRADA} ${where} ORDER BY e.created_at DESC`,
-    values
-  );
-  return rows;
+  return inventarioRepository.listMovimientos(filters);
 }
 
 module.exports = {

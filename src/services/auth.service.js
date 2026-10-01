@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const usuarioRepository = require('../repositories/usuario.repository');
 const httpError = require('../utils/httpError');
 
 const SALT_ROUNDS = 10;
@@ -24,47 +24,27 @@ function generateToken(user) {
 }
 
 async function findUserByCorreo(correo) {
-  const [rows] = await pool.execute(
-    `SELECT u.id_usuario, u.correo, u.contrasena, u.nombre, u.apellido, u.estado,
-            r.nombre AS rol
-       FROM usuarios u
-       INNER JOIN roles r ON r.id_rol = u.rol_id
-      WHERE u.correo = ?`,
-    [correo]
-  );
-
-  return rows[0] || null;
+  return usuarioRepository.findUserByCorreo(correo);
 }
 
 async function getUserById(id) {
-  const [rows] = await pool.execute(
-    `SELECT u.id_usuario, u.correo, u.nombre, u.apellido, u.estado,
-            r.nombre AS rol
-       FROM usuarios u
-       INNER JOIN roles r ON r.id_rol = u.rol_id
-      WHERE u.id_usuario = ?`,
-    [id]
-  );
-
-  return rows[0] || null;
+  return usuarioRepository.getUserById(id);
 }
 
 async function resolveRol(rolId) {
   if (rolId !== undefined && rolId !== null) {
-    const [roles] = await pool.execute('SELECT id_rol, nombre FROM roles WHERE id_rol = ?', [rolId]);
-    if (roles.length === 0) {
+    const rol = await usuarioRepository.findRolById(rolId);
+    if (!rol) {
       throw httpError(400, 'El rol especificado no existe');
     }
-    return roles[0];
+    return rol;
   }
 
-  const [roles] = await pool.execute('SELECT id_rol, nombre FROM roles WHERE nombre = ?', [
-    DEFAULT_ROLE,
-  ]);
-  if (roles.length === 0) {
+  const rol = await usuarioRepository.findRolByNombre(DEFAULT_ROLE);
+  if (!rol) {
     throw httpError(500, `No se encontró el rol por defecto "${DEFAULT_ROLE}" en la base de datos`);
   }
-  return roles[0];
+  return rol;
 }
 
 async function registerUser(data) {
@@ -72,22 +52,22 @@ async function registerUser(data) {
   const nombre = data.nombre.trim();
   const apellido = data.apellido ? data.apellido.trim() : null;
 
-  const [existing] = await pool.execute('SELECT id_usuario FROM usuarios WHERE correo = ?', [
-    correo,
-  ]);
-  if (existing.length > 0) {
+  const existing = await usuarioRepository.findByCorreo(correo);
+  if (existing) {
     throw httpError(409, 'El correo ya se encuentra registrado');
   }
 
   const rol = await resolveRol(data.rol_id);
   const hash = await bcrypt.hash(data.contrasena, SALT_ROUNDS);
 
-  const [result] = await pool.execute(
-    'INSERT INTO usuarios (rol_id, nombre, apellido, correo, contrasena) VALUES (?, ?, ?, ?, ?)',
-    [rol.id_rol, nombre, apellido, correo, hash]
-  );
+  const user = await usuarioRepository.create({
+    rol_id: rol.id_rol,
+    nombre,
+    apellido,
+    correo,
+    contrasena: hash,
+  });
 
-  const user = await getUserById(result.insertId);
   return toSafeUser(user);
 }
 
