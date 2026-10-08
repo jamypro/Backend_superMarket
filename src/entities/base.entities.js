@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const Codigo = new EntitySchema({
   name: 'codigos',
@@ -55,4 +55,4 @@ const Usuario = new EntitySchema({
   },
 });
 
-module.exports = { Codigo, Rol, Usuario };
+export { Codigo, Rol, Usuario };

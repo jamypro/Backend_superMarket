@@ -1,10 +1,10 @@
-const {
+import {
   validateEntrada,
   validateId,
   validateFecha,
-} = require('../validators/inventario.validator');
-const inventarioService = require('../services/inventario.service');
-const httpError = require('../utils/httpError');
+} from "../validators/inventario.validator.js";
+import * as inventarioService from "../services/inventario.service.js";
+import httpError from "../utils/httpError.js";
 
 function parseId(rawId) {
   if (!validateId(rawId)) {
@@ -82,7 +82,7 @@ async function registrarEntrada(req, res) {
     throw httpError(400, errors.join('; '));
   }
 
-  const creadoPor = req.user && req.user.userId;
+  const creadoPor = req.usuario && req.usuario.id_usuario;
   if (!creadoPor) {
     throw httpError(401, 'No se pudo determinar el usuario autenticado');
   }
@@ -108,4 +108,4 @@ async function listMovimientos(req, res) {
   });
 }
 
-module.exports = { list, getByProducto, registrarEntrada, listMovimientos };
+export { list, getByProducto, registrarEntrada, listMovimientos };

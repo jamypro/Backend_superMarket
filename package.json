@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Sistema Web de Facturación e Inventario para Supermercados — Backend (Node.js + Express + MySQL)",
   "main": "src/server.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",

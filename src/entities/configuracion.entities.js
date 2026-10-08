@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const ConfiguracionSistema = new EntitySchema({
   name: 'configuracion_sistema',
@@ -13,4 +13,4 @@ const ConfiguracionSistema = new EntitySchema({
   },
 });
 
-module.exports = { ConfiguracionSistema };
+export { ConfiguracionSistema };

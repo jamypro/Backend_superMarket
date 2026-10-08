@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const PrediccionReabastecimiento = new EntitySchema({
   name: 'prediccion_reabastecimiento',
@@ -21,4 +21,4 @@ const PrediccionReabastecimiento = new EntitySchema({
   },
 });
 
-module.exports = { PrediccionReabastecimiento };
+export { PrediccionReabastecimiento };

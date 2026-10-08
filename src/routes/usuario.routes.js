@@ -1,17 +1,17 @@
-const express = require('express');
+import express from "express";
 
-const usuarioController = require('../controllers/usuario.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+import * as usuarioController from "../controllers/usuario.controller.js";
+import { verificarToken, autorizarRoles } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(verificarToken);
 
-router.get('/', usuarioController.list);
-router.get('/:id', usuarioController.getById);
-router.post('/', usuarioController.create);
-router.put('/:id', usuarioController.update);
-router.patch('/:id/contrasena', usuarioController.changePassword);
-router.delete('/:id', usuarioController.remove);
+router.get("/", usuarioController.list);
+router.get("/:id", usuarioController.getById);
+router.post("/", usuarioController.create);
+router.put("/:id", usuarioController.update);
+router.patch("/:id/contrasena", usuarioController.changePassword);
+router.delete("/:id", autorizarRoles(1), usuarioController.remove);
 
-module.exports = router;
+export default router;

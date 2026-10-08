@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const Categoria = new EntitySchema({
   name: 'categorias',
@@ -81,4 +81,4 @@ const ImgProducto = new EntitySchema({
   },
 });
 
-module.exports = { Categoria, UnidadMedida, Producto, ImgProducto };
+export { Categoria, UnidadMedida, Producto, ImgProducto };

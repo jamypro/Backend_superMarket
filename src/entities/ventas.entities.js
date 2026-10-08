@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const MetodoPago = new EntitySchema({
   name: 'metodos_pago',
@@ -185,7 +185,7 @@ const PagoFacturaVenta = new EntitySchema({
   },
 });
 
-module.exports = {
+export {
   MetodoPago,
   TipoMovimiento,
   Caja,

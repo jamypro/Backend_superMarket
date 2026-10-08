@@ -1,76 +1,82 @@
-const bcrypt = require('bcrypt');
-const { pool } = require('../config/database');
-const httpError = require('../utils/httpError');
+import bcrypt from "bcrypt";
+import dataSource from "../config/data-source.js";
+import httpError from "../utils/httpError.js";
 
 const SALT_ROUNDS = 10;
-const ADMIN_ROLE_NAME = 'Administrador';
+const ADMIN_ROLE_NAME = "Administrador";
 
-const SELECT_USUARIO = `
-  SELECT u.id_usuario,
-         u.rol_id,
-         r.nombre AS rol,
-         u.nombre,
-         u.apellido,
-         u.tipo_documento,
-         u.documento,
-         u.correo,
-         u.telefono,
-         u.estado,
-         u.bloqueado,
-         u.intentos_fallidos,
-         u.bloqueo_hasta,
-         u.ultimo_acceso,
-         u.created_by,
-         CONCAT_WS(' ', cu.nombre, cu.apellido) AS creado_por,
-         u.created_at,
-         u.updated_at
-    FROM usuarios u
-    INNER JOIN roles r ON r.id_rol = u.rol_id
-    LEFT JOIN usuarios cu ON cu.id_usuario = u.created_by
-`;
+const usuarioRepository = () => dataSource.getRepository("usuarios");
+const rolRepository = () => dataSource.getRepository("roles");
+
+function selectUsuario() {
+  return usuarioRepository()
+    .createQueryBuilder("u")
+    .innerJoin("roles", "r", "r.id_rol = u.rol_id")
+    .leftJoin("usuarios", "cu", "cu.id_usuario = u.created_by")
+    .select("u.id_usuario", "id_usuario")
+    .addSelect("u.rol_id", "rol_id")
+    .addSelect("r.nombre", "rol")
+    .addSelect("u.nombre", "nombre")
+    .addSelect("u.apellido", "apellido")
+    .addSelect("u.tipo_documento", "tipo_documento")
+    .addSelect("u.documento", "documento")
+    .addSelect("u.correo", "correo")
+    .addSelect("u.telefono", "telefono")
+    .addSelect("u.estado", "estado")
+    .addSelect("u.bloqueado", "bloqueado")
+    .addSelect("u.intentos_fallidos", "intentos_fallidos")
+    .addSelect("u.bloqueo_hasta", "bloqueo_hasta")
+    .addSelect("u.ultimo_acceso", "ultimo_acceso")
+    .addSelect("u.created_by", "created_by")
+    .addSelect("CONCAT_WS(' ', cu.nombre, cu.apellido)", "creado_por")
+    .addSelect("u.created_at", "created_at")
+    .addSelect("u.updated_at", "updated_at");
+}
 
 async function findById(id) {
-  const [rows] = await pool.execute(`${SELECT_USUARIO} WHERE u.id_usuario = ?`, [id]);
-  return rows[0] || null;
+  return (
+    (await selectUsuario().where("u.id_usuario = :id", { id }).getRawOne()) ||
+    null
+  );
 }
 
 async function findAdminRoleId() {
-  const [rows] = await pool.execute('SELECT id_rol FROM roles WHERE nombre = ?', [ADMIN_ROLE_NAME]);
-  return rows[0] ? rows[0].id_rol : null;
+  const role = await rolRepository().findOneBy({ nombre: ADMIN_ROLE_NAME });
+  return role?.id_rol ?? null;
 }
 
 async function countActiveAdmins(adminRoleId) {
-  const [rows] = await pool.execute(
-    'SELECT COUNT(*) AS total FROM usuarios WHERE rol_id = ? AND estado = 1',
-    [adminRoleId]
-  );
-  return rows[0].total;
+  return usuarioRepository()
+    .createQueryBuilder("u")
+    .where("u.rol_id = :adminRoleId", { adminRoleId })
+    .andWhere("u.estado = :estado", { estado: 1 })
+    .getCount();
 }
 
 async function ensureCorreoAvailable(correo, excludeId = null) {
-  const [rows] = await pool.execute(
-    'SELECT id_usuario FROM usuarios WHERE correo = ? AND (? IS NULL OR id_usuario <> ?)',
-    [correo, excludeId, excludeId]
-  );
-  if (rows.length > 0) {
-    throw httpError(409, 'El correo ya se encuentra registrado');
+  const existing = await usuarioRepository().findOneBy({ correo });
+  if (
+    existing &&
+    (excludeId === null || Number(existing.id_usuario) !== Number(excludeId))
+  ) {
+    throw httpError(409, "El correo ya se encuentra registrado");
   }
 }
 
 async function ensureDocumentoAvailable(documento, excludeId = null) {
-  const [rows] = await pool.execute(
-    'SELECT id_usuario FROM usuarios WHERE documento = ? AND (? IS NULL OR id_usuario <> ?)',
-    [documento, excludeId, excludeId]
-  );
-  if (rows.length > 0) {
-    throw httpError(409, 'El documento ya se encuentra registrado');
+  const existing = await usuarioRepository().findOneBy({ documento });
+  if (
+    existing &&
+    (excludeId === null || Number(existing.id_usuario) !== Number(excludeId))
+  ) {
+    throw httpError(409, "El documento ya se encuentra registrado");
   }
 }
 
 async function ensureRolExists(rolId) {
-  const [rows] = await pool.execute('SELECT id_rol FROM roles WHERE id_rol = ?', [rolId]);
-  if (rows.length === 0) {
-    throw httpError(400, 'El rol especificado no existe');
+  const role = await rolRepository().findOneBy({ id_rol: rolId });
+  if (!role) {
+    throw httpError(400, "El rol especificado no existe");
   }
 }
 
@@ -80,65 +86,61 @@ async function ensureNotLastActiveAdmin(target, changes) {
     return;
   }
 
-  const isAdmin = target.rol_id === adminRoleId;
-  const wasActive = target.estado === 1;
-
+  const isAdmin = Number(target.rol_id) === Number(adminRoleId);
+  const wasActive = Number(target.estado) === 1;
   const nextEstado =
-    changes.estado !== undefined
-      ? changes.estado
-        ? 1
-        : 0
-      : target.estado;
-  const nextRolId = changes.rol_id !== undefined ? changes.rol_id : target.rol_id;
+    changes.estado !== undefined ? changes.estado : target.estado;
+  const nextRolId =
+    changes.rol_id !== undefined ? changes.rol_id : target.rol_id;
+  const removesAdmin =
+    isAdmin &&
+    (Number(nextEstado) !== 1 || Number(nextRolId) !== Number(adminRoleId));
 
-  const removesAdmin = isAdmin && (nextEstado !== 1 || nextRolId !== adminRoleId);
   if (!wasActive || !removesAdmin) {
     return;
   }
 
   const totalActive = await countActiveAdmins(adminRoleId);
   if (totalActive <= 1) {
-    throw httpError(409, 'No se puede desactivar o quitar el rol al último administrador activo');
+    throw httpError(
+      409,
+      "No se puede desactivar o quitar el rol al último administrador activo",
+    );
   }
 }
 
 async function list(filters = {}) {
-  const conditions = [];
-  const values = [];
+  const query = selectUsuario();
 
   if (filters.nombre) {
-    conditions.push("CONCAT_WS(' ', u.nombre, u.apellido) LIKE ?");
-    values.push(`%${filters.nombre}%`);
+    query.andWhere("CONCAT_WS(' ', u.nombre, u.apellido) LIKE :nombre", {
+      nombre: `%${filters.nombre}%`,
+    });
   }
 
   if (filters.correo) {
-    conditions.push('u.correo LIKE ?');
-    values.push(`%${filters.correo}%`);
+    query.andWhere("u.correo LIKE :correo", { correo: `%${filters.correo}%` });
   }
 
   if (filters.documento) {
-    conditions.push('u.documento = ?');
-    values.push(filters.documento);
+    query.andWhere("u.documento = :documento", {
+      documento: filters.documento,
+    });
   }
 
   if (filters.rol_id !== undefined && filters.rol_id !== null) {
-    conditions.push('u.rol_id = ?');
-    values.push(filters.rol_id);
+    query.andWhere("u.rol_id = :rolId", { rolId: filters.rol_id });
   }
 
   if (filters.estado !== undefined && filters.estado !== null) {
-    conditions.push('u.estado = ?');
-    values.push(filters.estado ? 1 : 0);
+    query.andWhere("u.estado = :estado", { estado: filters.estado ? 1 : 0 });
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-  const [rows] = await pool.execute(`${SELECT_USUARIO} ${where} ORDER BY u.id_usuario ASC`, values);
-  return rows;
+  return query.orderBy("u.id_usuario", "ASC").getRawMany();
 }
 
 function toOptionalText(value) {
-  if (value === null || value === undefined || value === '') {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
   return value.trim();
@@ -148,11 +150,12 @@ async function create(data, createdBy) {
   const rolId = data.rol_id;
   const nombre = data.nombre.trim();
   const apellido = toOptionalText(data.apellido);
-  const tipoDocumento = data.tipo_documento || 'CC';
+  const tipoDocumento = data.tipo_documento || "CC";
   const documento = toOptionalText(data.documento);
   const correo = data.correo.trim().toLowerCase();
   const telefono = toOptionalText(data.telefono);
-  const estado = data.estado === undefined || data.estado === null ? 1 : data.estado ? 1 : 0;
+  const estado =
+    data.estado === undefined || data.estado === null ? 1 : data.estado ? 1 : 0;
 
   await ensureRolExists(rolId);
   await ensureCorreoAvailable(correo);
@@ -160,16 +163,22 @@ async function create(data, createdBy) {
     await ensureDocumentoAvailable(documento);
   }
 
-  const hash = await bcrypt.hash(data.contrasena, SALT_ROUNDS);
+  const contrasena = await bcrypt.hash(data.contrasena, SALT_ROUNDS);
+  const usuario = usuarioRepository().create({
+    rol_id: rolId,
+    nombre,
+    apellido,
+    tipo_documento: tipoDocumento,
+    documento,
+    correo,
+    contrasena,
+    telefono,
+    estado,
+    created_by: createdBy ?? null,
+  });
 
-  const [result] = await pool.execute(
-    `INSERT INTO usuarios
-       (rol_id, nombre, apellido, tipo_documento, documento, correo, contrasena, telefono, estado, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [rolId, nombre, apellido, tipoDocumento, documento, correo, hash, telefono, estado, createdBy ?? null]
-  );
-
-  return findById(result.insertId);
+  const savedUsuario = await usuarioRepository().save(usuario);
+  return findById(savedUsuario.id_usuario);
 }
 
 async function update(id, data) {
@@ -179,16 +188,18 @@ async function update(id, data) {
   }
 
   const changes = {};
+  const updates = {};
 
   if (data.rol_id !== undefined && data.rol_id !== null) {
     await ensureRolExists(data.rol_id);
     changes.rol_id = data.rol_id;
+    updates.rol_id = data.rol_id;
   }
 
   if (data.correo !== undefined) {
     const correo = data.correo.trim().toLowerCase();
     await ensureCorreoAvailable(correo, id);
-    changes.correo = correo;
+    updates.correo = correo;
   }
 
   if (data.documento !== undefined) {
@@ -196,85 +207,51 @@ async function update(id, data) {
     if (documento) {
       await ensureDocumentoAvailable(documento, id);
     }
-    changes.documento = documento;
+    updates.documento = documento;
   }
 
   if (data.estado !== undefined) {
     changes.estado = data.estado ? 1 : 0;
+    updates.estado = changes.estado;
   }
 
   if (changes.rol_id !== undefined || changes.estado !== undefined) {
     await ensureNotLastActiveAdmin(target, changes);
   }
 
-  const sets = [];
-  const values = [];
-
-  if (changes.rol_id !== undefined) {
-    sets.push('rol_id = ?');
-    values.push(changes.rol_id);
-  }
-
   if (data.nombre !== undefined) {
-    sets.push('nombre = ?');
-    values.push(data.nombre.trim());
+    updates.nombre = data.nombre.trim();
   }
 
   if (data.apellido !== undefined) {
-    sets.push('apellido = ?');
-    values.push(toOptionalText(data.apellido));
+    updates.apellido = toOptionalText(data.apellido);
   }
 
   if (data.tipo_documento !== undefined) {
-    sets.push('tipo_documento = ?');
-    values.push(data.tipo_documento);
-  }
-
-  if (changes.documento !== undefined) {
-    sets.push('documento = ?');
-    values.push(changes.documento);
-  }
-
-  if (changes.correo !== undefined) {
-    sets.push('correo = ?');
-    values.push(changes.correo);
+    updates.tipo_documento = data.tipo_documento;
   }
 
   if (data.telefono !== undefined) {
-    sets.push('telefono = ?');
-    values.push(toOptionalText(data.telefono));
+    updates.telefono = toOptionalText(data.telefono);
   }
 
-  if (changes.estado !== undefined) {
-    sets.push('estado = ?');
-    values.push(changes.estado);
-  }
-
-  if (sets.length === 0) {
+  if (Object.keys(updates).length === 0) {
     return findById(id);
   }
 
-  values.push(id);
-
-  await pool.execute(`UPDATE usuarios SET ${sets.join(', ')} WHERE id_usuario = ?`, values);
-
+  await usuarioRepository().update(id, updates);
   return findById(id);
 }
 
 async function changePassword(id, contrasena) {
   const hash = await bcrypt.hash(contrasena, SALT_ROUNDS);
-
-  const [result] = await pool.execute('UPDATE usuarios SET contrasena = ? WHERE id_usuario = ?', [
-    hash,
-    id,
-  ]);
-
-  return result.affectedRows > 0;
+  const result = await usuarioRepository().update(id, { contrasena: hash });
+  return (result.affected ?? 0) > 0;
 }
 
 async function remove(id, currentUserId) {
   if (id === currentUserId) {
-    throw httpError(400, 'No puede eliminar su propia cuenta');
+    throw httpError(400, "No puede eliminar su propia cuenta");
   }
 
   const target = await findById(id);
@@ -285,21 +262,20 @@ async function remove(id, currentUserId) {
   await ensureNotLastActiveAdmin(target, { estado: 0 });
 
   try {
-    const [result] = await pool.execute('DELETE FROM usuarios WHERE id_usuario = ?', [id]);
-    return result.affectedRows > 0;
-  } catch (err) {
-    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-      throw httpError(409, 'El usuario tiene registros relacionados y no puede eliminarse');
+    const result = await usuarioRepository().delete(id);
+    return (result.affected ?? 0) > 0;
+  } catch (error) {
+    if (
+      error.driverError?.code === "ER_ROW_IS_REFERENCED_2" ||
+      error.code === "ER_ROW_IS_REFERENCED_2"
+    ) {
+      throw httpError(
+        409,
+        "El usuario tiene registros relacionados y no puede eliminarse",
+      );
     }
-    throw err;
+    throw error;
   }
 }
 
-module.exports = {
-  list,
-  findById,
-  create,
-  update,
-  changePassword,
-  remove,
-};
+export { list, findById, create, update, changePassword, remove };

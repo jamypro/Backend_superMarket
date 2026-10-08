@@ -1,4 +1,4 @@
-const categoriaRepository = require('../repositories/categoria.repository');
+import * as categoriaRepository from "../repositories/categoria.repository.js";
 
 async function list() {
   return categoriaRepository.list();
@@ -42,4 +42,4 @@ async function remove(id) {
   return categoriaRepository.remove(id);
 }
 
-module.exports = { list, findById, create, update, remove };
+export { list, findById, create, update, remove };

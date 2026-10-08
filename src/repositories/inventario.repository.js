@@ -1,4 +1,4 @@
-const dataSource = require('../config/data-source');
+import dataSource from "../config/data-source.js";
 
 const productoRepo = () => dataSource.getRepository('productos');
 const inventarioRepo = () => dataSource.getRepository('inventario');
@@ -123,7 +123,7 @@ function transaction(callback) {
   return dataSource.transaction(callback);
 }
 
-module.exports = {
+export {
   transaction,
   listStock,
   findProductoResumen,

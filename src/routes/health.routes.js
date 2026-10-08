@@ -1,6 +1,6 @@
-const express = require('express');
+import express from "express";
 
-const dataSource = require('../config/data-source');
+import dataSource from "../config/data-source.js";
 
 const router = express.Router();
 
@@ -24,4 +24,4 @@ router.get('/health', async (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

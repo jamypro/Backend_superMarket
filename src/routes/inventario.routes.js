@@ -1,13 +1,18 @@
-const express = require('express');
+import express from "express";
 
-const inventarioController = require('../controllers/inventario.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+import * as inventarioController from "../controllers/inventario.controller.js";
+import { verificarToken, autorizarRoles } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.get('/', inventarioController.list);
-router.get('/movimientos', inventarioController.listMovimientos);
-router.get('/:productoId', inventarioController.getByProducto);
-router.post('/entrada', authMiddleware, inventarioController.registrarEntrada);
+router.get("/", inventarioController.list);
+router.get("/movimientos", inventarioController.listMovimientos);
+router.get("/:productoId", inventarioController.getByProducto);
+router.post(
+  "/entrada",
+  verificarToken,
+  autorizarRoles(1, 2),
+  inventarioController.registrarEntrada,
+);
 
-module.exports = router;
+export default router;

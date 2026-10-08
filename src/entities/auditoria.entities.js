@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const Auditoria = new EntitySchema({
   name: 'auditoria',
@@ -78,4 +78,4 @@ const Notificacion = new EntitySchema({
   },
 });
 
-module.exports = { Auditoria, TipoAnomalia, Anomalia, Notificacion };
+export { Auditoria, TipoAnomalia, Anomalia, Notificacion };

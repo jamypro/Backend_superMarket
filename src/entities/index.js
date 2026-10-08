@@ -1,13 +1,13 @@
-const base = require('./base.entities');
-const catalogo = require('./catalogo.entities');
-const proveedores = require('./proveedores.entities');
-const inventario = require('./inventario.entities');
-const ventas = require('./ventas.entities');
-const devoluciones = require('./devoluciones.entities');
-const auditoria = require('./auditoria.entities');
-const prediccion = require('./prediccion.entities');
-const ecommerce = require('./ecommerce.entities');
-const configuracion = require('./configuracion.entities');
+import * as base from "./base.entities.js";
+import * as catalogo from "./catalogo.entities.js";
+import * as proveedores from "./proveedores.entities.js";
+import * as inventario from "./inventario.entities.js";
+import * as ventas from "./ventas.entities.js";
+import * as devoluciones from "./devoluciones.entities.js";
+import * as auditoria from "./auditoria.entities.js";
+import * as prediccion from "./prediccion.entities.js";
+import * as ecommerce from "./ecommerce.entities.js";
+import * as configuracion from "./configuracion.entities.js";
 
 const entities = [
   ...Object.values(base),
@@ -22,4 +22,4 @@ const entities = [
   ...Object.values(configuracion),
 ];
 
-module.exports = { entities };
+export { entities };

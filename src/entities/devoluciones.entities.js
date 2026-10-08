@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const EstadoDevolucion = new EntitySchema({
   name: 'estados_devoluciones',
@@ -54,4 +54,4 @@ const ItemDevolucion = new EntitySchema({
   },
 });
 
-module.exports = { EstadoDevolucion, Devolucion, ItemDevolucion };
+export { EstadoDevolucion, Devolucion, ItemDevolucion };

@@ -1,10 +1,12 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const usuarioRepository = require('../repositories/usuario.repository');
-const httpError = require('../utils/httpError');
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import * as usuarioRepository from "../repositories/usuario.repository.js";
+import httpError from "../utils/httpError.js";
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ROLE = 'Cajero';
+const MAX_INTENTOS_FALLIDOS = 5;
+const MINUTOS_BLOQUEO = 15;
 
 function toSafeUser(user) {
   return {
@@ -20,7 +22,11 @@ function generateToken(user) {
   const secret = process.env.JWT_SECRET;
   const expiresIn = process.env.JWT_EXPIRES_IN || '1h';
 
-  return jwt.sign({ userId: user.id_usuario, rol: user.rol }, secret, { expiresIn });
+  return jwt.sign(
+    { id_usuario: user.id_usuario, rol_id: user.rol_id },
+    secret,
+    { expiresIn },
+  );
 }
 
 async function findUserByCorreo(correo) {
@@ -75,18 +81,40 @@ async function loginUser(data) {
   const correo = data.correo.trim().toLowerCase();
 
   const user = await findUserByCorreo(correo);
-  if (!user || user.estado !== 1) {
+  if (!user || Number(user.estado) !== 1) {
     throw httpError(401, 'Credenciales inválidas');
+  }
+
+  const bloqueoHasta = user.bloqueo_hasta ? new Date(user.bloqueo_hasta) : null;
+  if (Number(user.bloqueado) === 1 && bloqueoHasta && bloqueoHasta > new Date()) {
+    throw httpError(423, 'Cuenta bloqueada temporalmente. Intente de nuevo más tarde');
   }
 
   const match = await bcrypt.compare(data.contrasena, user.contrasena);
   if (!match) {
+    const intentos = (Number(user.intentos_fallidos) || 0) + 1;
+
+    if (intentos >= MAX_INTENTOS_FALLIDOS) {
+      const bloqueoHasta = new Date(Date.now() + MINUTOS_BLOQUEO * 60 * 1000);
+      await usuarioRepository.incrementarIntentosFallidos(user.id_usuario, intentos, {
+        bloqueado: true,
+        bloqueoHasta,
+      });
+      throw httpError(
+        423,
+        `Cuenta bloqueada temporalmente tras ${MAX_INTENTOS_FALLIDOS} intentos fallidos`,
+      );
+    }
+
+    await usuarioRepository.incrementarIntentosFallidos(user.id_usuario, intentos);
     throw httpError(401, 'Credenciales inválidas');
   }
+
+  await usuarioRepository.registrarAccesoExitoso(user.id_usuario);
 
   const token = generateToken(user);
 
   return { token, user: toSafeUser(user) };
 }
 
-module.exports = { registerUser, loginUser, getUserById };
+export { registerUser, loginUser, getUserById };

@@ -1,5 +1,5 @@
-const productoRepository = require('../repositories/producto.repository');
-const httpError = require('../utils/httpError');
+import * as productoRepository from "../repositories/producto.repository.js";
+import httpError from "../utils/httpError.js";
 
 async function findById(id) {
   return productoRepository.findById(id);
@@ -150,4 +150,4 @@ async function remove(id) {
   }
 }
 
-module.exports = { list, findById, findByCodigoBarras, create, update, remove };
+export { list, findById, findByCodigoBarras, create, update, remove };
