@@ -1,6 +1,6 @@
-const { DataSource } = require('typeorm');
+import { DataSource } from "typeorm";
 
-const { entities } = require('../entities');
+import { entities } from "../entities/index.js";
 
 const dataSource = new DataSource({
   type: 'mysql',
@@ -15,4 +15,4 @@ const dataSource = new DataSource({
   entities,
 });
 
-module.exports = dataSource;
+export default dataSource;

@@ -1,5 +1,5 @@
-const inventarioRepository = require('../repositories/inventario.repository');
-const httpError = require('../utils/httpError');
+import * as inventarioRepository from "../repositories/inventario.repository.js";
+import httpError from "../utils/httpError.js";
 
 function mapStockRow(row) {
   return { ...row, stock_critico: Boolean(row.stock_critico) };
@@ -105,7 +105,7 @@ async function listMovimientos(filters = {}) {
   return inventarioRepository.listMovimientos(filters);
 }
 
-module.exports = {
+export {
   listStock,
   findStockByProducto,
   registerEntrada,

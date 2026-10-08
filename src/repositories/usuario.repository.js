@@ -1,4 +1,4 @@
-const dataSource = require("../config/data-source");
+import dataSource from "../config/data-source.js";
 
 const usuarioRepo = () => dataSource.getRepository("usuarios");
 const rolRepo = () => dataSource.getRepository("roles");
@@ -9,10 +9,15 @@ function userSelectBuilder({ includePassword = false } = {}) {
     .select([])
     .innerJoin("roles", "r", "r.id_rol = u.rol_id")
     .addSelect("u.id_usuario", "id_usuario")
+    .addSelect("u.rol_id", "rol_id")
     .addSelect("u.correo", "correo")
     .addSelect("u.nombre", "nombre")
     .addSelect("u.apellido", "apellido")
     .addSelect("u.estado", "estado")
+    .addSelect("u.bloqueado", "bloqueado")
+    .addSelect("u.intentos_fallidos", "intentos_fallidos")
+    .addSelect("u.bloqueo_hasta", "bloqueo_hasta")
+    .addSelect("u.ultimo_acceso", "ultimo_acceso")
     .addSelect("r.nombre", "rol");
 
   if (includePassword) {
@@ -53,11 +58,39 @@ async function create(data) {
   return getUserById(result.identifiers[0].id_usuario);
 }
 
-module.exports = {
+async function incrementarIntentosFallidos(
+  id,
+  intentosFallidos,
+  { bloqueado = false, bloqueoHasta = null } = {},
+) {
+  const updates = {
+    intentos_fallidos: intentosFallidos,
+    bloqueado: bloqueado ? 1 : 0,
+  };
+
+  if (bloqueoHasta) {
+    updates.bloqueo_hasta = bloqueoHasta;
+  }
+
+  return usuarioRepo().update(id, updates);
+}
+
+async function registrarAccesoExitoso(id) {
+  return usuarioRepo().update(id, {
+    intentos_fallidos: 0,
+    bloqueado: 0,
+    bloqueo_hasta: null,
+    ultimo_acceso: new Date(),
+  });
+}
+
+export {
   findUserByCorreo,
   getUserById,
   findByCorreo,
   findRolById,
   findRolByNombre,
   create,
+  incrementarIntentosFallidos,
+  registrarAccesoExitoso,
 };

@@ -1,4 +1,4 @@
-const { EntitySchema } = require('typeorm');
+import { EntitySchema } from "typeorm";
 
 const Proveedor = new EntitySchema({
   name: 'proveedores',
@@ -105,4 +105,4 @@ const ItemOrdenCompra = new EntitySchema({
   },
 });
 
-module.exports = { Proveedor, ProveedorProducto, OrdenCompra, ItemOrdenCompra };
+export { Proveedor, ProveedorProducto, OrdenCompra, ItemOrdenCompra };

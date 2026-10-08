@@ -1,10 +1,10 @@
-const {
+import {
   validateCategoria,
   validateCategoriaUpdate,
   validateId,
-} = require('../validators/categoria.validator');
-const categoriaService = require('../services/categoria.service');
-const httpError = require('../utils/httpError');
+} from "../validators/categoria.validator.js";
+import * as categoriaService from "../services/categoria.service.js";
+import httpError from "../utils/httpError.js";
 
 function parseId(rawId) {
   if (!validateId(rawId)) {
@@ -89,4 +89,4 @@ async function remove(req, res) {
   });
 }
 
-module.exports = { list, getById, create, update, remove };
+export { list, getById, create, update, remove };

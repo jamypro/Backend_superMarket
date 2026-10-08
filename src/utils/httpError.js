@@ -4,4 +4,4 @@ function httpError(status, message) {
   return error;
 }
 
-module.exports = httpError;
+export default httpError;

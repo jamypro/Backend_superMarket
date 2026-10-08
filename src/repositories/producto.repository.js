@@ -1,4 +1,4 @@
-const dataSource = require('../config/data-source');
+import dataSource from "../config/data-source.js";
 
 const productoRepo = () => dataSource.getRepository('productos');
 
@@ -92,7 +92,7 @@ async function remove(id) {
   return result.affected > 0;
 }
 
-module.exports = {
+export {
   list,
   findById,
   findByCodigoBarras,

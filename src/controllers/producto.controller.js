@@ -1,10 +1,10 @@
-const {
+import {
   validateProducto,
   validateProductoUpdate,
   validateId,
-} = require('../validators/producto.validator');
-const productoService = require('../services/producto.service');
-const httpError = require('../utils/httpError');
+} from "../validators/producto.validator.js";
+import * as productoService from "../services/producto.service.js";
+import httpError from "../utils/httpError.js";
 
 function parseId(rawId) {
   if (!validateId(rawId)) {
@@ -118,4 +118,4 @@ async function remove(req, res) {
   });
 }
 
-module.exports = { list, getById, create, update, remove };
+export { list, getById, create, update, remove };

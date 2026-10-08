@@ -176,4 +176,4 @@ function validateProductoUpdate(body = {}) {
   return errors;
 }
 
-module.exports = { validateProducto, validateProductoUpdate, validateId };
+export { validateProducto, validateProductoUpdate, validateId };

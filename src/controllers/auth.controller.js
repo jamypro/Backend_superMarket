@@ -1,6 +1,6 @@
-const { validateRegister, validateLogin } = require('../validators/auth.validator');
-const authService = require('../services/auth.service');
-const httpError = require('../utils/httpError');
+import { validateRegister, validateLogin } from "../validators/auth.validator.js";
+import * as authService from "../services/auth.service.js";
+import httpError from "../utils/httpError.js";
 
 async function register(req, res) {
   const errors = validateRegister(req.body);
@@ -33,7 +33,7 @@ async function login(req, res) {
 }
 
 async function me(req, res) {
-  const user = await authService.getUserById(req.user.userId);
+  const user = await authService.getUserById(req.usuario.id_usuario);
   if (!user) {
     throw httpError(404, 'Usuario no encontrado');
   }
@@ -45,4 +45,4 @@ async function me(req, res) {
   });
 }
 
-module.exports = { register, login, me };
+export { register, login, me };

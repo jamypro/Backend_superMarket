@@ -1,16 +1,16 @@
-require('dotenv').config();
+import "dotenv/config";
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
 
-const healthRoutes = require('./routes/health.routes');
-const authRoutes = require('./routes/auth.routes');
-const categoriaRoutes = require('./routes/categoria.routes');
-const productoRoutes = require('./routes/producto.routes');
-const inventarioRoutes = require('./routes/inventario.routes');
-const usuarioRoutes = require('./routes/usuario.routes');
-const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
+import healthRoutes from "./routes/health.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import categoriaRoutes from "./routes/categoria.routes.js";
+import productoRoutes from "./routes/producto.routes.js";
+import inventarioRoutes from "./routes/inventario.routes.js";
+import usuarioRoutes from "./routes/usuario.routes.js";
+import { notFoundHandler, errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -29,4 +29,4 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

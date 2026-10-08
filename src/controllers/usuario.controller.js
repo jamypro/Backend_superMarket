@@ -1,11 +1,11 @@
-const {
+import {
   validateUsuario,
   validateUsuarioUpdate,
   validatePasswordChange,
   validateId,
-} = require('../validators/usuario.validator');
-const usuarioService = require('../services/usuario.service');
-const httpError = require('../utils/httpError');
+} from "../validators/usuario.validator.js";
+import * as usuarioService from "../services/usuario.service.js";
+import httpError from "../utils/httpError.js";
 
 function parseId(rawId) {
   if (!validateId(rawId)) {
@@ -78,7 +78,10 @@ async function create(req, res) {
     throw httpError(400, errors.join('; '));
   }
 
-  const usuario = await usuarioService.create(req.body, req.user && req.user.userId);
+  const usuario = await usuarioService.create(
+    req.body,
+    req.usuario && req.usuario.id_usuario,
+  );
 
   res.status(201).json({
     success: true,
@@ -130,7 +133,7 @@ async function changePassword(req, res) {
 
 async function remove(req, res) {
   const id = parseId(req.params.id);
-  const currentUserId = req.user && req.user.userId;
+  const currentUserId = req.usuario && req.usuario.id_usuario;
 
   const removed = await usuarioService.remove(id, currentUserId);
   if (!removed) {
@@ -143,4 +146,4 @@ async function remove(req, res) {
   });
 }
 
-module.exports = { list, getById, create, update, changePassword, remove };
+export { list, getById, create, update, changePassword, remove };

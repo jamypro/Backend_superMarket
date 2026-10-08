@@ -78,4 +78,4 @@ function validateEntrada(body = {}) {
   return errors;
 }
 
-module.exports = { validateEntrada, validateId, validateFecha };
+export { validateEntrada, validateId, validateFecha };

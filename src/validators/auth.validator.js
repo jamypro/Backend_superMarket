@@ -56,4 +56,4 @@ function validateLogin(body = {}) {
   return errors;
 }
 
-module.exports = { validateRegister, validateLogin };
+export { validateRegister, validateLogin };

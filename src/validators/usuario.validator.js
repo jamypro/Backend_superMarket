@@ -180,7 +180,7 @@ function validatePasswordChange(body = {}) {
   return errors;
 }
 
-module.exports = {
+export {
   validateUsuario,
   validateUsuarioUpdate,
   validatePasswordChange,

@@ -59,4 +59,4 @@ function validateCategoriaUpdate(body = {}) {
   return errors;
 }
 
-module.exports = { validateCategoria, validateCategoriaUpdate, validateId };
+export { validateCategoria, validateCategoriaUpdate, validateId };
