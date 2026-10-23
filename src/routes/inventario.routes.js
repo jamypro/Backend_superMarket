@@ -1,7 +1,10 @@
 import express from "express";
 
 import * as inventarioController from "../controllers/inventario.controller.js";
-import { verificarToken, autorizarRoles } from "../middlewares/auth.middleware.js";
+import {
+  verificarToken,
+  autorizarRoles,
+} from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -11,7 +14,7 @@ router.get("/:productoId", inventarioController.getByProducto);
 router.post(
   "/entrada",
   verificarToken,
-  autorizarRoles(1, 2),
+  autorizarRoles(1, 3),
   inventarioController.registrarEntrada,
 );
 
