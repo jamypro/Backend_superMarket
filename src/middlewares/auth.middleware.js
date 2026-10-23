@@ -1,15 +1,6 @@
 import jwt from "jsonwebtoken";
 import httpError from "../utils/httpError.js";
 
-/**
- * Middleware de autenticación que valida el token JWT enviado en el header
- * `Authorization` y adjunta su payload al objeto `req.usuario`.
- *
- * @param {import('express').Request} req - Objeto de solicitud HTTP.
- * @param {import('express').Response} res - Objeto de respuesta HTTP.
- * @param {import('express').NextFunction} next - Callback para continuar la cadena.
- * @returns {void}
- */
 function verificarToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -40,20 +31,14 @@ function verificarToken(req, res, next) {
   }
 }
 
-/**
- * Factory de middleware de autorización que valida que el rol del usuario
- * autenticado (`req.usuario.rol_id`) esté incluido en la lista de roles
- * permitidos. Si no coincide, responde con HTTP 403 Forbidden.
- *
- * @param {...number} rolesPermitidos - IDs de rol autorizados para acceder a la ruta.
- * @returns {import('express').RequestHandler} Middleware de autorización.
- */
 function autorizarRoles(...rolesPermitidos) {
   return function roleMiddleware(req, res, next) {
     const rolId = Number(req.usuario && req.usuario.rol_id);
 
     if (!rolesPermitidos.includes(rolId)) {
-      return next(httpError(403, "No tienes permiso para realizar esta acción"));
+      return next(
+        httpError(403, "No tienes permiso para realizar esta acción"),
+      );
     }
 
     return next();
